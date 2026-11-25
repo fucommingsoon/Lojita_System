@@ -1,0 +1,9 @@
+--- a/Init/Prelude.lean
++++ b/Init/Prelude.lean
+@@ -1987,0 +1988,6 @@
++/-- Lower construction of a successor to the primitive for the stock tagged Naturals ABI. -/
++@[noinline, extern "lean_nat_succ"]
++def Nat.abiSucc (n : @& Nat) : Nat := Nat.succ n
++
++@[csimp] theorem Nat.lowerSucc : Eq Nat.succ Nat.abiSucc := rfl
++

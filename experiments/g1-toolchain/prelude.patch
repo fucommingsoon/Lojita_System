@@ -1,0 +1,185 @@
+--- a/Init/Prelude.lean
++++ b/Init/Prelude.lean
+@@ -1888,52 +1887,0 @@
+-Addition of natural numbers, typically used via the `+` operator.
+-
+-This function is overridden in both the kernel and the compiler to efficiently evaluate using the
+-arbitrary-precision arithmetic library. The definition provided here is the logical model.
+--/
+-/- One might expect/hope that this was `implicit_reducible` rather than `instance_reducible`.
+-Currently, the test `tests/elab/whnfProj.lean` fails if we make this change. -/
+-@[extern "lean_nat_add", instance_reducible]
+-protected def Nat.add : (@& Nat) → (@& Nat) → Nat
+-  | a, Nat.zero   => a
+-  | a, Nat.succ b => Nat.succ (Nat.add a b)
+-
+-instance instAddNat : Add Nat where
+-  add := Nat.add
+-
+-/- We mark the following definitions as pattern to make sure they can be used in recursive equations,
+-   and reduced by the equation Compiler. -/
+-attribute [match_pattern] Nat.add Add.add HAdd.hAdd Neg.neg Mul.mul HMul.hMul Inv.inv
+-
+-set_option bootstrap.genMatcherCode false in
+-/--
+-Multiplication of natural numbers, usually accessed via the `*` operator.
+-
+-This function is overridden in both the kernel and the compiler to efficiently evaluate using the
+-arbitrary-precision arithmetic library. The definition provided here is the logical model.
+--/
+-/- One might expect/hope that this was `implicit_reducible` rather than `instance_reducible`.
+-Currently, the stage 2 build fails in `Init/Grind/Ring/Basic.lean` if we make this change. -/
+-@[extern "lean_nat_mul", instance_reducible]
+-protected def Nat.mul : (@& Nat) → (@& Nat) → Nat
+-  | _, 0          => 0
+-  | a, Nat.succ b => Nat.add (Nat.mul a b) a
+-
+-instance instMulNat : Mul Nat where
+-  mul := Nat.mul
+-
+-set_option bootstrap.genMatcherCode false in
+-/--
+-The power operation on natural numbers, usually accessed via the `^` operator.
+-
+-This function is overridden in both the kernel and the compiler to efficiently evaluate using the
+-arbitrary-precision arithmetic library. The definition provided here is the logical model.
+--/
+-@[extern "lean_nat_pow"]
+-protected def Nat.pow (m : @& Nat) : (@& Nat) → Nat
+-  | 0      => 1
+-  | succ n => Nat.mul (Nat.pow m n) m
+-
+-instance instNatPowNat : NatPow Nat := ⟨Nat.pow⟩
+-
+-set_option bootstrap.genMatcherCode false in
+-/--
+@@ -2006,0 +1955,86 @@
++The predecessor of a natural number is one less than it. The predecessor of `0` is defined to be
++`0`.
++
++This definition is overridden in the compiler with an efficient implementation. This definition is
++the logical model.
++-/
++@[extern "lean_nat_pred", implicit_reducible]
++def Nat.pred : (@& Nat) → Nat
++  | 0      => 0
++  | succ a => a
++
++set_option bootstrap.genMatcherCode false in
++/--
++Subtraction of natural numbers, truncated at `0`. Usually used via the `-` operator.
++
++If a result would be less than zero, then the result is zero.
++
++This definition is overridden in both the kernel and the compiler to efficiently evaluate using the
++arbitrary-precision arithmetic library. The definition provided here is the logical model.
++
++Examples:
++* `5 - 3 = 2`
++* `8 - 2 = 6`
++* `8 - 8 = 0`
++* `8 - 20 = 0`
++-/
++/- One might expect/hope that this was `implicit_reducible` rather than `instance_reducible`.
++Currently, the stage 2 build fails in `Init/Data/BitVec/Lemmas.lean` if we make this change. -/
++@[extern "lean_nat_sub", instance_reducible]
++protected def Nat.sub : (@& Nat) → (@& Nat) → Nat
++  | a, 0      => a
++  | a, succ b => pred (Nat.sub a b)
++
++set_option bootstrap.genMatcherCode false in
++/--
++Addition of natural numbers, typically used via the `+` operator.
++
++This function is overridden in both the kernel and the compiler to efficiently evaluate using the
++arbitrary-precision arithmetic library. The definition provided here is the logical model.
++-/
++/- One might expect/hope that this was `implicit_reducible` rather than `instance_reducible`.
++Currently, the test `tests/elab/whnfProj.lean` fails if we make this change. -/
++@[instance_reducible]
++protected def Nat.add : (@& Nat) → (@& Nat) → Nat
++  | a, Nat.zero   => a
++  | a, Nat.succ b => Nat.succ (Nat.add a b)
++
++instance instAddNat : Add Nat where
++  add := Nat.add
++
++/- We mark the following definitions as pattern to make sure they can be used in recursive equations,
++   and reduced by the equation Compiler. -/
++attribute [match_pattern] Nat.add Add.add HAdd.hAdd Neg.neg Mul.mul HMul.hMul Inv.inv
++
++set_option bootstrap.genMatcherCode false in
++/--
++Multiplication of natural numbers, usually accessed via the `*` operator.
++
++This function is overridden in both the kernel and the compiler to efficiently evaluate using the
++arbitrary-precision arithmetic library. The definition provided here is the logical model.
++-/
++/- One might expect/hope that this was `implicit_reducible` rather than `instance_reducible`.
++Currently, the stage 2 build fails in `Init/Grind/Ring/Basic.lean` if we make this change. -/
++@[instance_reducible]
++protected def Nat.mul : (@& Nat) → (@& Nat) → Nat
++  | _, 0          => 0
++  | a, Nat.succ b => Nat.add (Nat.mul a b) a
++
++instance instMulNat : Mul Nat where
++  mul := Nat.mul
++
++set_option bootstrap.genMatcherCode false in
++/--
++The power operation on natural numbers, usually accessed via the `^` operator.
++
++This function is overridden in both the kernel and the compiler to efficiently evaluate using the
++arbitrary-precision arithmetic library. The definition provided here is the logical model.
++-/
++protected def Nat.pow (m : @& Nat) : (@& Nat) → Nat
++  | 0      => 1
++  | succ n => Nat.mul (Nat.pow m n) m
++
++instance instNatPowNat : NatPow Nat := ⟨Nat.pow⟩
++
++set_option bootstrap.genMatcherCode false in
++/--
+@@ -2093,13 +2126,0 @@
+-set_option bootstrap.genMatcherCode false in
+-/--
+-The predecessor of a natural number is one less than it. The predecessor of `0` is defined to be
+-`0`.
+-
+-This definition is overridden in the compiler with an efficient implementation. This definition is
+-the logical model.
+--/
+-@[extern "lean_nat_pred", implicit_reducible]
+-def Nat.pred : (@& Nat) → Nat
+-  | 0      => 0
+-  | succ a => a
+-
+@@ -2238,22 +2258,0 @@
+-set_option bootstrap.genMatcherCode false in
+-/--
+-Subtraction of natural numbers, truncated at `0`. Usually used via the `-` operator.
+-
+-If a result would be less than zero, then the result is zero.
+-
+-This definition is overridden in both the kernel and the compiler to efficiently evaluate using the
+-arbitrary-precision arithmetic library. The definition provided here is the logical model.
+-
+-Examples:
+-* `5 - 3 = 2`
+-* `8 - 2 = 6`
+-* `8 - 8 = 0`
+-* `8 - 20 = 0`
+--/
+-/- One might expect/hope that this was `implicit_reducible` rather than `instance_reducible`.
+-Currently, the stage 2 build fails in `Init/Data/BitVec/Lemmas.lean` if we make this change. -/
+-@[extern "lean_nat_sub", instance_reducible]
+-protected def Nat.sub : (@& Nat) → (@& Nat) → Nat
+-  | a, 0      => a
+-  | a, succ b => pred (Nat.sub a b)
+-
+@@ -2583 +2581,0 @@
+-attribute [extern "lean_uint8_of_nat_mk"] UInt8.ofBitVec
+@@ -3369 +3366,0 @@
+-attribute [extern "lean_array_mk"] Array.mk
+@@ -3583 +3579,0 @@
+-attribute [extern "lean_byte_array_mk"] ByteArray.mk
