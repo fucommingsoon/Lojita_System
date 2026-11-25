@@ -57,8 +57,7 @@
  /--
  `Except ε α` is a type which represents either an error of type `ε` or a successful result with a
  value of type `α`.
-@@ -4188,5 +4203,9 @@
-   | error : ε → Except ε α
+@@ -4189,4 +4204,8 @@
    /-- A success value of type `α` -/
    | ok    : α → Except ε α
 +
