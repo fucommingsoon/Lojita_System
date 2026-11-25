@@ -24,16 +24,9 @@ cp "$src/Init/G1Packing.o" archive/G1Packing.c.o.export
 # Stock importers use the boxed symbol even though the new constructor has a csimp rule.
 # The stock wrapper consumes its argument via lean_uint8_of_nat_mk. Packing.viaByte's
 # boxed wrapper consumes the argument with lean_dec and boxes the returned UInt8.
-cat > archive/packing-compat.c <<'CEOF'
-#include <lean/lean.h>
-extern lean_object *l_Packing_viaByte___boxed(lean_object *);
-LEAN_EXPORT lean_object *l_UInt8_ofBitVec___boxed(lean_object *owned) {
-    return l_Packing_viaByte___boxed(owned);
-}
-CEOF
-"$prefix/bin/leanc" -O2 -DNDEBUG -c archive/packing-compat.c -o archive/packing-compat.o
+"$prefix/bin/leanc" -O2 -DNDEBUG -c "$here/packing-compat.c" -o archive/packing-compat.o
 ar rcs "$prefix/lib/lean/libInit.a" archive/*.o.export archive/packing-compat.o
-git -C "$repo" archive 9225b46e02ca913a3f6a020c7ee5ece8ed2efe57 | tar -x -C project
+git -C "$repo" archive HEAD | tar -x -C project
 cd project
 export LEAN_SYSROOT="$prefix" PATH="$prefix/bin:$PATH"
 lake build > "$out/project-build.log" 2>&1
