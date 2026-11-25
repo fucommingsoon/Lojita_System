@@ -1,5 +1,5 @@
 import Std.Data.TreeMap
-import LojitaCtx.Posix.Types
+import LojitaCtx.Posix.Vfs.FileBytes
 
 namespace LojitaCtx.Posix
 
@@ -63,7 +63,7 @@ def inodeStat (t : InodeTable) (id : InodeId) : Except Errno StatObs := do
 
 def inodeRead (t : InodeTable) (id off count : Nat) : Except Errno Bytes := do
   match (← t.node id).payload with
-  | .reg b => return (b.extract off (off+count)).data.toList
+  | .reg b => return fileRange b off count
   | .dir .. => throw .EISDIR
   | _ => throw .EINVAL
 
@@ -72,9 +72,7 @@ def inodeWrite (t : InodeTable) (id off : Nat) (bs : Bytes) : Except Errno Inode
   if n.roLayer then throw .EROFS
   let .reg b := n.payload | throw .EINVAL
   if bs.isEmpty then return t
-  let hole := ByteArray.mk (Array.replicate (off-b.size) 0)
-  let newData := b.extract 0 off ++ hole ++ bs.toByteArray ++ b.extract (off+bs.length) b.size
-  return t.put id { n with payload := .reg newData }
+  return t.put id { n with payload := .reg (replaceBytes b off bs) }
 
 def validSeg (s : Seg) : Bool :=
   !s.isEmpty && s.length ≤ 255 && s != [46] && s != [46,46] &&

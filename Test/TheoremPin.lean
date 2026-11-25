@@ -23,6 +23,16 @@ open LojitaCtx.Posix LojitaCtx.Io LojitaCtx.Io.FsLib Lojita.Store.TreeCAS
 
 namespace TheoremPin
 
+-- Compatibility with the original packed file slice and write observation.
+private theorem fileRange_extract (before : ByteArray) (off count : Nat) :
+    fileRange before off count = (before.extract off (off+count)).data.toList := by
+  simp [fileRange_eq, ByteArray.data_extract, Array.toList_extract, List.extract_eq_take_drop]
+
+example (before : ByteArray) (off : Nat) (bs : Bytes) :
+    ((replaceBytes before off bs).extract off (off+bs.length)).data.toList = bs := by
+  rw [← fileRange_extract]
+  exact read_replaced before off bs
+
 -- T1
 example (sl : StepSlice) (nb : Bool) (s : StreamBuf)
     (h : sl.intrBefore = false) :

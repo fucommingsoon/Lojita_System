@@ -67,7 +67,7 @@ theorem inode_chunk {m : Machine} {fd ino off size} {bytes : ByteArray}
     next.fds = m.fds := by
   obtain ⟨id,d,node,look,target,access,offset,hn,hp⟩ := file.live
   let count := min (max 1 size) (max 1 sl.maxBytes)
-  let chunk := (bytes.extract off (off+count)).data.toList
+  let chunk := fileRange bytes off count
   let nxt := m.advance id d (off+chunk.length) false
   cases hi : sl.intrBefore
   · have hd : dispatchSyscall m sl (.read fd (max 1 size)) = .ok (.ok chunk, nxt) := by
@@ -76,7 +76,7 @@ theorem inode_chunk {m : Machine} {fd ino off size} {bytes : ByteArray}
     obtain ⟨hval,rfl⟩ := h
     have same : chunk = out := by first | exact hval | exact Ret.ok.inj hval
     rw [← same]
-    exact ⟨by simp [chunk, count, ByteArray.data_extract, List.extract_eq_take_drop], rfl⟩
+    exact ⟨by simp [chunk,count], rfl⟩
   · have positive : 0 < max 1 size := by omega
     have hd : dispatchSyscall m sl (.read fd (max 1 size)) = .error .EINTR := by
       simp [Bind.bind, Except.bind, throw, throwThe, MonadExceptOf.throw, dispatchSyscall, fdRead, look, access, target, hi, positive] <;> rfl

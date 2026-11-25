@@ -83,8 +83,8 @@ theorem independent_write_read {m n : Machine} {a b i j ino : Nat} {writer reade
     obtain ⟨changed,existsNode,content,links⟩ := written_inode node regular written hbs
     obtain ⟨final,readableNode,unchanged⟩ := account_linked_payload (m := next) existsNode (by rwa [links])
     have bytes : inodeRead next.account.kernel.vfs ino reader.offset bs.length = .ok bs := by
-      simp [inodeRead,readableNode,unchanged,content,offset,read_replaced,Bind.bind,Except.bind,Pure.pure,Except.pure]
-      simpa [ByteArray.data_extract,List.extract_eq_take_drop] using read_replaced before writer.offset bs
+      simp only [inodeRead,readableNode,Bind.bind,Except.bind,unchanged,content,offset,
+        read_replaced,Pure.pure,Except.pure]
     exact ⟨seek_cur seen rreg (links_account h) rd,
       actual_read seen rreg readable rfl (links_account h) bs rd rdAwake fits bytes⟩
 

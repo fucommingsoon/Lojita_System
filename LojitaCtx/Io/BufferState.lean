@@ -48,7 +48,9 @@ def BufReader.withFrame (r : BufReader) (f : Framing) : BufReader :=
   { r with buf := f.tailRev.reverse.toByteArray, pos := 0, ready := f.completeRev.reverse }
 
 @[simp] theorem frame_withFrame (r : BufReader) (f : Framing) :
-    (r.withFrame f).frame = f := by cases f; simp [BufReader.withFrame, BufReader.frame]
+    (r.withFrame f).frame = f := by
+  cases f
+  simp [-List.data_toByteArray, List.toList_data_toByteArray, BufReader.withFrame, BufReader.frame]
 
 def BufReader.pending (r : BufReader) : Bytes := r.ready.flatten ++ r.buf.data.toList.drop r.pos
 
@@ -105,7 +107,7 @@ theorem bufReader_halfline_lossless (fd : Fd) (pre post : Bytes)
     rfl
   simp only [blocked, BufReader.ingest, chunk_append]
   simp only [chunk_without_lf _ pre hpre, chunk_without_lf _ post hpost]
-  simp [BufReader.frame, BufReader.withFrame, BufReader.inspect, BufReader.receive,
-        Framing.chunk, Framing.byte, List.append_assoc]
+  simp [-List.data_toByteArray, List.toList_data_toByteArray, BufReader.frame, BufReader.withFrame,
+    BufReader.inspect, BufReader.receive, Framing.chunk, Framing.byte, List.append_assoc]
 
 end LojitaCtx.Io

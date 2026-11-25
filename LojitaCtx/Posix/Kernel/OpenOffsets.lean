@@ -2,13 +2,35 @@ import LojitaCtx.Posix.Kernel.Independent
 
 namespace LojitaCtx.Posix
 
+open Std.DTreeMap.Internal in
+/-- Bound a lookup by the rightmost key, following the same branch as maxKey?. -/
+private theorem lookup_le_rightmost {α : Type} (t : Impl Nat (fun _ => α))
+    (ordered : t.Ordered) (k : Nat) (found : t.contains k = true) :
+    k ≤ t.maxKey?.getD 0 := by
+  induction t generalizing k with
+  | leaf => cases found
+  | inner sz key value left right _ ih =>
+    have location : k ≤ key ∨ right.contains k = true := by
+      by_cases le : k ≤ key
+      · exact Or.inl le
+      · have gt := Nat.compare_eq_gt.mpr (Nat.lt_of_not_ge le)
+        exact Or.inr (by simpa [Impl.contains,gt] using found)
+    cases right with
+    | leaf =>
+      obtain le | missing := location
+      · simpa only [Impl.maxKey?,Option.getD_some] using le
+      · cases missing
+    | inner n rk rv l r =>
+      rw [Impl.maxKey?]
+      obtain le | present := location
+      · have lt : key < rk := Nat.compare_eq_lt.mp (ordered.compare_right
+          (show ⟨rk,rv⟩ ∈ (Impl.inner n rk rv l r).toListModel by simp [Impl.toListModel]))
+        exact Nat.le_trans le (Nat.le_trans (Nat.le_of_lt lt) (ih ordered.right rk (by simp [Impl.contains])))
+      · exact ih ordered.right k present
+
 private theorem fresh_ne {α : Type} (t : Table α) {k : Nat} (hk : k ∈ t) :
-    tableFresh t ≠ k := by
-  obtain ⟨km,hm⟩ := Option.isSome_iff_exists.mp (Std.TreeMap.isSome_maxKey?_of_mem hk)
-  have hle := (Std.TreeMap.maxKey?_eq_some_iff_mem_and_forall.mp hm).2 k hk
-  have le : k ≤ km := Nat.isLE_compare.mp hle
-  simp [tableFresh,hm]
-  omega
+    tableFresh t ≠ k :=
+  Nat.ne_of_gt (Nat.lt_succ_of_le (lookup_le_rightmost t.inner.inner t.inner.wf.ordered k hk))
 
 private theorem allocates {m n : Machine} {f : OpenFlags} {target : KernelTarget} {fd : Nat}
     (h : m.allocate target f = .ok (fd,n)) :

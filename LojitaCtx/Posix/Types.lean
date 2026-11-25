@@ -88,7 +88,29 @@ structure StatObs where
 
 inductive Cap where
   | fdIoCap | fsPathCap | ttyCap | netCap | clockCap | envCap | foreignCap (tag : String)
-  deriving Repr
+
+section
+
+/-- Append one character in Lean string-literal syntax. The ASCII escapes
+    are decided from code points, so the remaining characters pass through. -/
+private def appendQuoted (acc : String) (c : Char) : String :=
+  match c.toNat with
+  | 9 => acc ++ "\\t"
+  | 10 => acc ++ "\\n"
+  | 34 => acc ++ "\\\""
+  | 92 => acc ++ "\\\\"
+  | n =>
+    if n ≤ 31 || n == 127 then
+      acc ++ String.ofList ['\\', 'x', (n / 16).digitChar, (n % 16).digitChar]
+    else acc.push c
+
+-- Use the same character iterator as String.quote and keep the instance local to Cap.
+private local instance : Repr String where
+  reprPrec s _ := .text (String.Internal.foldl appendQuoted "\"" s ++ "\"")
+
+deriving instance Repr for Cap
+
+end
 
 def Cap.ctorIdx : Cap → Nat
   | .fdIoCap => 0

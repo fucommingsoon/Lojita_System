@@ -32,8 +32,8 @@ theorem readLine_halfline_syscalls {Δ : List Cap} (cap : .fdIoCap ∈ Δ) (fd :
       some (.ok (some (pre ++ post ++ [lf])),final) := by
     simp only [r,r₀,BufReader.ingest,chunk_append]
     simp only [chunk_without_lf _ pre noLF₀,chunk_without_lf _ post noLF₁]
-    simp [BufReader.frame,BufReader.withFrame,BufReader.inspect,
-      Framing.chunk,Framing.byte,List.append_assoc]
+    simp [-List.data_toByteArray, List.toList_data_toByteArray, BufReader.frame, BufReader.withFrame,
+      BufReader.inspect, Framing.chunk, Framing.byte, List.append_assoc]
   obtain ⟨final,found⟩ := found
   have ask : (readLine cap r).observe 1 = .ask (.read r.fd (max 1 r.chunkSize)) cap
       (fun reply => PosixProg.unfoldPrefix (readStep cap .line) 0 (r.receive reply)) := by
