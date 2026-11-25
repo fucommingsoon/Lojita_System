@@ -1,28 +1,69 @@
 --- a/Init/Prelude.lean
 +++ b/Init/Prelude.lean
-@@ -2006,0 +2007,4 @@
+@@ -2004,6 +2004,10 @@
+ protected def Nat.add : (@& Nat) → (@& Nat) → Nat
+   | a, Nat.zero   => a
+   | a, Nat.succ b => Nat.succ (Nat.add a b)
 +
 +/-- Constructor index of the two scalar Boolean values. -/
 +protected def Bool.ctorIdx (value : Bool) : Nat :=
 +  Bool.casesOn value Nat.zero (Nat.succ Nat.zero)
-@@ -3058,0 +3063 @@
+
+ instance instAddNat : Add Nat where
+   add := Nat.add
+@@ -3056,6 +3060,7 @@
+     (ite (LE.le v (UInt32.ofNatLT 0x7FF (of_decide_eq_true rfl))) 2
+       (ite (LE.le v (UInt32.ofNatLT 0xFFFF (of_decide_eq_true rfl))) 3 4))
+
 +set_option genCtorIdx false in
-@@ -3071,0 +3077,4 @@
+ /--
+ Optional values, which are either `some` around a value from the underlying type or `none`.
+
+@@ -3069,6 +3074,10 @@
+   /-- Some value of type `α`. -/
+   | some (val : α) : Option α
+
 +/-- Constructor index computed by case analysis. -/
 +protected def Option.ctorIdx {α : Type u} (value : Option α) : Nat :=
 +  Option.casesOn value 0 (fun _ => 1)
 +
-@@ -3107,0 +3117 @@
+ attribute [unbox] Option
+
+ export Option (none some)
+@@ -3105,6 +3114,7 @@
+   | some x => some (f x)
+   | none   => none
+
 +set_option genCtorIdx false in
-@@ -3127,0 +3138,4 @@
+ /--
+ Linked lists: ordered lists, in which each element has a reference to the next element.
+
+@@ -3125,6 +3135,10 @@
+   Usually written `head :: tail`.
+   -/
+   | cons (head : α) (tail : List α) : List α
 +
 +/-- Constructor index computed by case analysis. -/
 +protected def List.ctorIdx {α : Type u} (value : List α) : Nat :=
 +  List.casesOn value 0 (fun _ _ => 1)
-@@ -4176,0 +4191 @@
+
+ instance {α} : Inhabited (List α) where
+   default := List.nil
+@@ -4174,6 +4188,7 @@
+ instance monadFunctorRefl (m) : MonadFunctorT m m where
+   monadMap f := f
+
 +set_option genCtorIdx false in
-@@ -4190,0 +4206,4 @@
+ /--
+ `Except ε α` is a type which represents either an error of type `ε` or a successful result with a
+ value of type `α`.
+@@ -4188,5 +4203,9 @@
+   | error : ε → Except ε α
+   /-- A success value of type `α` -/
+   | ok    : α → Except ε α
 +
 +/-- Constructor index computed by case analysis. -/
 +protected def Except.ctorIdx {ε : Type u} {α : Type v} (value : Except ε α) : Nat :=
 +  Except.casesOn value (fun _ => 0) (fun _ => 1)
+
+ attribute [unbox] Except
