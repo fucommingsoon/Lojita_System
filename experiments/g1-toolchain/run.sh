@@ -27,13 +27,14 @@ check_project() {
   (cd "$project" && PATH="$prefix/bin:$PATH" LEAN_SYSROOT="$prefix" ./test-g1-purity-and-size.sh) >"$log" 2>&1 || code=$?
   echo "project G1 exit=$code"
   grep -E 'G1 audited|G1 strict purity failed at' "$log"
-  local violations=95 externs=77
+  local violations=95 externs=77 unsafes=17
   if [[ $variant == official ]]; then violations=101; externs=83; fi
+  if [[ $variant == pure-tags ]]; then violations=91; unsafes=13; fi
   [[ $code == 1 ]]
-  grep -Fq "G1 strict purity failed at $violations constants [(axiom, 1), (extern, $externs), (unsafe, 17)]" "$log"
+  grep -Fq "G1 strict purity failed at $violations constants [(axiom, 1), (extern, $externs), (unsafe, $unsafes)]" "$log"
 }
 
-for variant in official stripped adapted; do
+for variant in official stripped adapted pure-tags; do
   dir="$work/$variant"
   mkdir -p "$dir/Init"; cd "$dir"
   prefix=$release
@@ -45,9 +46,10 @@ for variant in official stripped adapted; do
     prefix="$dir/prefix"
     python3 "$here/sysroot.py" "$release" "$prefix"
     patch -s --fuzz=0 -p1 < "$here/prelude.patch"
-    if [[ $variant == adapted ]]; then patch -s --fuzz=0 -p1 < "$here/successor.patch"; fi
+    if [[ $variant != stripped ]]; then patch -s --fuzz=0 -p1 < "$here/successor.patch"; fi
+    if [[ $variant == pure-tags ]]; then patch -s --fuzz=0 -p1 < "$here/tags.patch"; fi
     compile_module Init/Prelude
-    if [[ $variant == adapted ]]; then
+    if [[ $variant != stripped ]]; then
       cp "$here/Packing.lean" Init/G1Packing.lean
       compile_module Init/G1Packing
       cp "$release/src/lean/Init.lean" Init.lean
@@ -67,15 +69,29 @@ for variant in official stripped adapted; do
     grep -q 'replacement bodies: reachable=292, forbidden=17 .*Nat.abiSucc' audit.log
     grep -q 'replacement bodies:.*ByteArray.push' audit.log
   fi
+  abi_flags=()
+  if [[ $variant == pure-tags ]]; then
+    for name in Bool Option List Except; do
+      grep -Eq "^${name}\.ctorIdx: reachable=[0-9]+, forbidden=0 \[\]$" audit.log
+      if grep -Fq "l_${name}_ctorIdx___impl" Init/Prelude.c; then
+        echo "Unexpected native override for $name.ctorIdx" >&2
+        exit 1
+      fi
+    done
+    grep -Eq '^String: reachable=[0-9]+, forbidden=19 ' audit.log
+    grep -q '^replacement bodies: reachable=286, forbidden=15 .*Nat.abiSucc' audit.log
+    abi_flags+=(-DG1_PURE_TAGS)
+  fi
   objects+=(Init/Prelude.c Native.c)
   cflags=(-O1 -ffunction-sections -fdata-sections -I"$release/include")
   for source in "${objects[@]}"; do cc "${cflags[@]}" -c "$source" -o "${source%.c}.o"; done
-  cc "${cflags[@]}" -Wall -Wextra -Werror "$here/abi.c" "${objects[@]/%.c/.o}" \
+  cc "${cflags[@]}" "${abi_flags[@]}" -Wall -Wextra -Werror "$here/abi.c" "${objects[@]/%.c/.o}" \
     -Wl,--gc-sections,-Map,check.map -L"$release/lib/lean" -Wl,-rpath,"$release/lib/lean" -lleanshared -o check
   if [[ $variant != official ]]; then
     nm --defined-only check >defined-symbols.txt
     for name in add mul pow; do grep -q " T l_Nat_$name$" defined-symbols.txt; done
   fi
+  ./check tags | tee tags.log
   abi=0; arithmetic=0
   ./check abi >abi.log || abi=$?
   timeout 3s ./check arithmetic >arithmetic.log || arithmetic=$?

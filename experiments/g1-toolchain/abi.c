@@ -12,6 +12,11 @@ extern lean_object *g1_mul(lean_object *, lean_object *);
 extern lean_object *g1_pow(lean_object *, lean_object *);
 extern lean_object *g1_arithmetic(lean_object *, lean_object *);
 
+extern lean_object *g1_bool_tag(uint8_t);
+extern lean_object *g1_option_tag(lean_object *);
+extern lean_object *g1_list_tag(lean_object *);
+extern lean_object *g1_except_tag(lean_object *);
+
 static uint8_t value(size_t i, size_t n) { return (uint8_t)(i * 37 + n); }
 
 static lean_object *list_input(size_t n) {
@@ -70,6 +75,49 @@ static int small_matches(lean_object *got, size_t expected) {
     return ok;
 }
 
+#ifdef G1_PURE_TAGS
+extern lean_object *l_Bool_ctorIdx(uint8_t);
+extern lean_object *l_Bool_ctorIdx___boxed(lean_object *);
+#endif
+
+/* Use both scalar and heap payloads so payload values cannot serve as discriminants. */
+static int check_tags(void) {
+    unsigned passed = 0;
+    for (unsigned tag = 0; tag < 2; ++tag) {
+        passed += small_matches(g1_bool_tag((uint8_t)tag), tag);
+        for (unsigned big = 0; big < 2; ++big) {
+            lean_object *payload = big ? lean_cstr_to_nat("18446744073709551616") : lean_box(0);
+            lean_object *opt = lean_box(0);
+            lean_object *list = lean_box(0);
+            if (tag) {
+                opt = lean_alloc_ctor(1, 1, 0);
+                list = lean_alloc_ctor(1, 2, 0);
+                lean_inc(payload);
+                lean_ctor_set(opt, 0, payload);
+                lean_inc(payload);
+                lean_ctor_set(list, 0, payload);
+                lean_ctor_set(list, 1, lean_box(0));
+            }
+            lean_object *result = lean_alloc_ctor(tag, 1, 0);
+            lean_ctor_set(result, 0, payload);
+            passed += small_matches(g1_option_tag(opt), tag);
+            passed += small_matches(g1_list_tag(list), tag);
+            passed += small_matches(g1_except_tag(result), tag);
+        }
+    }
+    printf("constructor tags=%u/14\n", passed);
+#ifdef G1_PURE_TAGS
+    unsigned native = 0;
+    for (uint8_t i = 0; i < 2; ++i) {
+        native += small_matches(l_Bool_ctorIdx(i), i);
+        native += small_matches(l_Bool_ctorIdx___boxed(lean_box(i)), i);
+    }
+    printf("Bool scalar/boxed=%u/4\n", native);
+    if (native != 4) return 1;
+#endif
+    return passed != 14;
+}
+
 static int big_add_matches(const char *a, unsigned b, const char *expected) {
     lean_object *x = lean_cstr_to_nat(a);
     lean_object *want = lean_cstr_to_nat(expected);
@@ -104,6 +152,7 @@ static int check_arithmetic(void) {
 }
 
 int main(int argc, char **argv) {
+    if (argc == 2 && strcmp(argv[1], "tags") == 0) return check_tags();
     if (argc == 2 && strcmp(argv[1], "abi") == 0) return check_abi();
     if (argc == 2 && strcmp(argv[1], "arithmetic") == 0) return check_arithmetic();
     return 2;

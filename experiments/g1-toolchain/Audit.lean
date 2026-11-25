@@ -30,6 +30,9 @@ unsafe def main (paths : List String) : IO Unit := do
   let root := `G1Probe.Payload.reg
   let (reachable, bad) ← forbidden env #[root]
   IO.println s!"payload: reachable={reachable}, forbidden={bad.length} {bad}"
+  for name in [`String, `Bool.ctorIdx, `Option.ctorIdx, `List.ctorIdx, `Except.ctorIdx] do
+    let (count, violations) ← forbidden env #[name]
+    IO.println s!"{name}: reachable={count}, forbidden={violations.length} {violations}"
   let replacements := Compiler.CSimp.ext.getState env
   let targets := [`Nat.succ, `UInt8.ofBitVec, `Array.mk, `ByteArray.mk]
   let mut impls := #[]

@@ -21,4 +21,12 @@ example (x : BitVec 8) : (UInt8.ofBitVec x).toBitVec = x := rfl
 example (xs : List UInt8) : (Array.mk xs).toList = xs := rfl
 example (xs : Array UInt8) : (ByteArray.mk xs).data = xs := rfl
 
+example : Bool.ctorIdx false = 0 := rfl
+example : Bool.ctorIdx true = 1 := rfl
+
+@[export g1_bool_tag] def boolTag (value : Bool) : Nat := Bool.ctorIdx value
+@[export g1_option_tag] def optionTag (value : Option Nat) : Nat := Option.ctorIdx value
+@[export g1_list_tag] def listTag (value : List Nat) : Nat := List.ctorIdx value
+@[export g1_except_tag] def exceptTag (value : Except Nat Nat) : Nat := Except.ctorIdx value
+
 end G1Probe

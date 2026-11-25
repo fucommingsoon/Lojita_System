@@ -1,0 +1,28 @@
+--- a/Init/Prelude.lean
++++ b/Init/Prelude.lean
+@@ -2006,0 +2007,4 @@
++
++/-- Constructor index of the two scalar Boolean values. -/
++protected def Bool.ctorIdx (value : Bool) : Nat :=
++  Bool.casesOn value Nat.zero (Nat.succ Nat.zero)
+@@ -3058,0 +3063 @@
++set_option genCtorIdx false in
+@@ -3071,0 +3077,4 @@
++/-- Constructor index computed by case analysis. -/
++protected def Option.ctorIdx {α : Type u} (value : Option α) : Nat :=
++  Option.casesOn value 0 (fun _ => 1)
++
+@@ -3107,0 +3117 @@
++set_option genCtorIdx false in
+@@ -3127,0 +3138,4 @@
++
++/-- Constructor index computed by case analysis. -/
++protected def List.ctorIdx {α : Type u} (value : List α) : Nat :=
++  List.casesOn value 0 (fun _ _ => 1)
+@@ -4176,0 +4191 @@
++set_option genCtorIdx false in
+@@ -4190,0 +4206,4 @@
++
++/-- Constructor index computed by case analysis. -/
++protected def Except.ctorIdx {ε : Type u} {α : Type v} (value : Except ε α) : Nat :=
++  Except.casesOn value (fun _ => 0) (fun _ => 1)

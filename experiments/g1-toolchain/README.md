@@ -4,13 +4,14 @@
 
 ## 47 服务器实测
 
-每组使用同一个 Lojita 提交 `9225b46e02ca913a3f6a020c7ee5ece8ed2efe57`，从干净检出运行原版 `./test-g1-purity-and-size.sh`。三个项目运行各检查 2,925 个声明、8,577 个可达常量，退出码均为 1。
+以下工具链对照均使用同一个 Lojita 提交 `9225b46e02ca913a3f6a020c7ee5ece8ed2efe57`，从干净检出运行原版 `./test-g1-purity-and-size.sh`。每组均检查 2,925 个声明。前三组各有 8,577 个可达常量，最后一组有 8,573 个。项目门禁均退出 1。
 
 | 工具链 | 最小载荷违规 / 可达 | UInt8 | Array、ByteArray、Payload（各自） | Nat 算术 | 项目 G1 违规 |
 | --- | --- | --- | --- | --- | --- |
 | 官方 Lean 4.36.0 | 6 / 63 | 256 / 256 | 257 / 257 | 1,333 / 1,333 | 101（83 extern、17 unsafe、1 公理） |
 | 移除六个 extern | 0 / 63 | 1 / 256 | 0 / 257 | 3 秒超时 | 95（77 extern、17 unsafe、1 公理） |
 | 再加入原生适配 | 0 / 63 | 256 / 256 | 257 / 257 | 1,333 / 1,333 | 95（77 extern、17 unsafe、1 公理） |
+| 再改用安全的构造器编号 | 0 / 63 | 256 / 256 | 257 / 257 | 1,333 / 1,333 | 91（77 extern、13 unsafe、1 公理） |
 
 六个命中是 `Nat.add`、`Nat.mul`、`Nat.pow`、`UInt8.ofBitVec`、`Array.mk` 和 `ByteArray.mk`。每组均通过三个构造器的 Lean 投影等式证明。原生测试从 C 调用编译后的 Lean 函数，检查所有单字节值，以及长度 0 至 256 的普通数组、紧凑字节数组和载荷的运行时表示、长度和逐字节内容。算术覆盖小整数加、乘、幂及其组合，另测了跨越小整数表示边界和 42 位十进制数的加法。
 
@@ -24,6 +25,12 @@
 
 实验仅重编相应的 Prelude、Init 模块和测试程序，链接时显式加入生成的对象文件，并继续使用官方共享运行时及其余预编译标准库。验证范围限于上述原生用例和项目 G1，未检验完整工具链自举、任意 Lake 应用的默认链接、PB 任务或性能。
 
+## 四种构造器的原生编号
+
+`tags.patch` 将 `Bool.ctorIdx`、`Option.ctorIdx`、`List.ctorIdx` 和 `Except.ctorIdx` 定义为对输入的 Lean 分支匹配。四个函数仍保留原有名称、类型和编号语义。每个函数单独审计均为零命中，生成的 Prelude C 中均已消除原来的 unsafe 实现。原生测试覆盖布尔值、空构造器、含小整数和堆上大整数的构造器，14 项检查通过。直接调用布尔的标量及装箱入口也通过了 4 项检查。
+
+在 `adapted` 和 `pure-tags` 两组间，规格必需的 `String` 类型的声明闭包从 21 个命中降至 19 个，四个既有编译替换的实现闭包从 17 个降至 15 个。后者仍有 `Nat.abiSucc`、`ByteArray.push` 等原生依赖。完整项目中的其他类型仍会用到 `getObjTagNat`。
+
 ## 复现
 
 在 Linux x86-64 的该分支检出中，将官方 Lean 4.36.0 的 bin 目录加入 PATH，准备 Bash、Python 3、Git、GNU C 工具链、patch、tar 和 coreutils。脚本检查工具链提交和 Prelude 源码哈希。可直接运行，也可传入一个尚不存在的输出目录。
@@ -32,4 +39,4 @@
 ./experiments/g1-toolchain/run.sh
 ```
 
-脚本首行输出实验目录。三个子目录 `official/`、`stripped/`、`adapted/` 各自保留 `audit.log`、`abi.log`、`arithmetic.log`、`check.map`、原生可执行文件 `check` 和完整的 `project-g1.log`。超时时算术日志可能为空，可在控制台记录中查看退出码 124。脚本退出 0 表示复现了三组预期观测，其中包括项目 G1 的三次失败。
+脚本首行输出实验目录。四个子目录 `official/`、`stripped/`、`adapted/`、`pure-tags/` 各自保留 `audit.log`、`abi.log`、`arithmetic.log`、`tags.log`、`check.map`、原生可执行文件 `check` 和完整的 `project-g1.log`。超时时算术日志可能为空，可在控制台记录中查看退出码 124。脚本退出 0 表示复现了四组预期观测，其中包括项目 G1 的四次失败。
