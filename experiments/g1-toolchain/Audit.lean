@@ -43,3 +43,12 @@ unsafe def main (paths : List String) : IO Unit := do
   if !impls.isEmpty then
     let (n, deps) ← forbidden env impls
     IO.println s!"replacement bodies: reachable={n}, forbidden={deps.length} {deps}"
+  if replacements.map.contains `Nat.add then
+    for (name, target, proof) in [(`Nat.add, `G1Arithmetic.add, `G1Arithmetic.lowerAdd),
+                                  (`Nat.mul, `G1Arithmetic.mul, `G1Arithmetic.lowerMul),
+                                  (`Nat.pow, `G1Arithmetic.pow, `G1Arithmetic.lowerPow)] do
+      let some e := replacements.map.find? name | throw <| IO.userError s!"missing lowering {name}"
+      unless e.toDeclName == target && e.thmName == proof do
+        throw <| IO.userError s!"unexpected lowering for {name}"
+      let (count, bad) ← forbidden env #[name, target, proof]
+      IO.println s!"bounded lowering: {name} -> {target} ({proof}): reachable={count}, forbidden={bad.length} {bad}"

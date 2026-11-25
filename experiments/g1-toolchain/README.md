@@ -61,3 +61,20 @@
 ```
 
 脚本首行输出实验目录。四个子目录 `official/`、`stripped/`、`adapted/`、`pure-tags/` 各自保留 `audit.log`、`abi.log`、`arithmetic.log`、`tags.log`、`check.map`、原生可执行文件 `check` 和完整的 `project-g1.log`。超时时算术日志可能为空，可在控制台记录中查看退出码 124。脚本退出 0 表示复现了四组预期观测，其中包括项目 G1 的四次失败。
+
+## 有证的有界算术实验
+
+在四标签工具链的原生混合归档中，按第二个参数逐个取后继的 `Nat.add` 会用尽线程栈。`Arithmetic.lean` 保留 Prelude 中的逻辑定义，用 `@[csimp]` 注册三个经过 Lean 检查的等式。加法取两数较大者的两倍作为上界，通过三次自然数减法得到和。乘法和幂按二进制位迭代。每轮的剩余乘数或指数都减半，生成的 C 使用循环。
+
+在上文的 `run.sh` 生成 `pure-tags/` 后运行下列命令。两个输出目录均应事先不存在。第一条验证算术组件，第二条诊断完整 Lojita 启动；后者遇到任一失败就返回非零。
+
+```sh
+./experiments/g1-toolchain/bounded-arithmetic.sh /path/to/pure-tags /tmp/g1-bounded
+./experiments/g1-toolchain/bounded-smoke.sh /tmp/g1-bounded /tmp/g1-bounded-sdk
+```
+
+`bounded-arithmetic.sh` 编译注册规则前后的两份相同原生调用程序。旧调用点保留 `l_Nat_add/mul/pow` 三个符号；各个符号的实现直接转到对应的 `l_G1Arithmetic_add/mul/pow`。脚本检查两个借用参数、拥有所有权的返回值以及生成 C 的运行时调用。新编译的程序直接使用 Lean 的编译器等式。两套程序各通过 1333 个算术样例、11 组 Python 任意精度整数对照、构造器 ABI 和 14 个标签检查。大数样例覆盖 2000 位十进制的进位、2048 位乘 3072 位以及 2 的 16384 次幂。
+
+`audit.log` 分别列出原声明、替换体和等式证明的联合依赖闭包。四标签配置下，加法闭包含 6 个 `extern`，乘法与幂各含 11 个。生成 C 的数值原语是 `lean_nat_dec_eq`、`lean_nat_dec_le`、`lean_nat_mod`、`lean_nat_shiftl`、`lean_nat_shiftr` 和 `lean_nat_sub`。代码还使用 Lean 装箱、引用计数和模块初始化。项目 strict G1 仍要求整个可达闭包内的禁止项均为零。
+
+47 服务器上，单独替换 Bool 标签的混合库在默认 ASLR 下原先因加法栈溢出退出 134。换入有界算术后，旧构建重复 12 次成功 1 次；用工具链 Clang 重编后，10 次成功 1 次。四标签配置从干净项目构建完成 370 项，默认 ASLR 下重复启动 `verify-self` 12 次，其中 1 次成功，11 次收到 SIGSEGV。在单 Bool 配置下保留 ASLR 的 GDB 回溯显示，崩溃经过 `Lean.CollectAxioms.collect`、`Lean.mkModuleData` 和 `lean_alloc_small_object_core`。该回溯尚未确定损坏内存的起点。完整混合 SDK 仍未通过可靠启动验证。
